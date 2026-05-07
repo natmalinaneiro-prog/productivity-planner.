@@ -357,6 +357,18 @@
       margin-top: 3px;
     }
 
+    .date-line {
+      display: inline-flex;
+      width: fit-content;
+      margin-top: 6px;
+      padding: 3px 8px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 950;
+    }
+
     .mini-ring, .big-ring {
       border-radius: 50%;
       background: conic-gradient(#2f6b4f 0deg, #edf0ed 0deg);
@@ -1056,6 +1068,7 @@
     const appState = {
       server: Boolean(apiBase || isLocalServer),
       done: JSON.parse(localStorage.getItem("planner.done.v2") || "{}"),
+      datedTasks: {},
       planning: {},
       balance: {}
     };
@@ -1120,6 +1133,26 @@
       return `${day}-${index}`;
     }
 
+    function datedTaskKey(dateKey, index) {
+      return `date-${dateKey}-${index}`;
+    }
+
+    function dateKeyForWeekDay(dayIndex) {
+      const now = new Date();
+      const monday = new Date(now);
+      const currentIndex = (now.getDay() + 6) % 7;
+      monday.setDate(now.getDate() - currentIndex + dayIndex);
+      const year = monday.getFullYear();
+      const month = String(monday.getMonth() + 1).padStart(2, "0");
+      const day = String(monday.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function displayDate(dateKey) {
+      const [year, month, day] = dateKey.split("-");
+      return `${day}.${month}.${year}`;
+    }
+
     function initTelegramMiniApp() {
       const tg = window.Telegram?.WebApp;
       if (!tg) return;
@@ -1143,6 +1176,7 @@
         appState.done = state.done || {};
         Object.keys(saved).forEach(key => delete saved[key]);
         Object.assign(saved, appState.done);
+        appState.datedTasks = state.datedTasks || {};
         appState.planning = state.planning || {};
         appState.balance = state.balance || {};
       } catch (error) {
@@ -1264,8 +1298,13 @@
 
     function dayPercent(day) {
       const tasks = tasksByDay[day] || [];
-      const done = tasks.filter((_, index) => saved[taskKey(day, index)]).length;
-      return tasks.length ? done / tasks.length : 0;
+      const dayIndex = dayShort.indexOf(day);
+      const dateKey = dateKeyForWeekDay(dayIndex);
+      const datedTasks = appState.datedTasks[dateKey] || [];
+      const done = tasks.filter((_, index) => saved[taskKey(day, index)]).length
+        + datedTasks.filter((_, index) => saved[datedTaskKey(dateKey, index)]).length;
+      const total = tasks.length + datedTasks.length;
+      return total ? done / total : 0;
     }
 
     function setRing(el, value) {
@@ -1280,6 +1319,8 @@
       dayShort.forEach((day, dayIndex) => {
         const percent = dayPercent(day);
         const tasks = tasksByDay[day];
+        const dateKey = dateKeyForWeekDay(dayIndex);
+        const datedTasks = appState.datedTasks[dateKey] || [];
         const card = document.createElement("article");
         card.className = "day-check";
         card.innerHTML = `
@@ -1287,6 +1328,7 @@
             <div>
               <div class="day-name">${days[dayIndex]}</div>
               <div class="day-focus">${dayIndex < 5 ? "3 фокуса максимум: деньги, блог/ИИ, ресурс" : "семья, отдых, мягкое планирование"}</div>
+              <div class="date-line">${displayDate(dateKey)}</div>
             </div>
             <div class="mini-ring"><span class="ring-text">0%</span></div>
           </div>
@@ -1316,18 +1358,44 @@
           };
           list.append(label);
         });
+        datedTasks.forEach((item, index) => {
+          const id = datedTaskKey(dateKey, index);
+          const done = Boolean(saved[id]);
+          const label = document.createElement("label");
+          label.className = `task ${done ? "done" : ""}`;
+          label.innerHTML = `
+            <input type="checkbox" ${done ? "checked" : ""}>
+            <div>
+              <div class="task-title">${item.text}</div>
+              <div class="task-meta"><span class="mini-label">задача с датой</span><span>${item.time || displayDate(dateKey)}</span></div>
+            </div>
+          `;
+          label.querySelector("input").onchange = (event) => {
+            if (event.target.checked) saved[id] = true;
+            else delete saved[id];
+            localStorage.setItem("planner.done.v2", JSON.stringify(saved));
+            saveRemoteState({ done: saved });
+            renderChecklist();
+          };
+          list.append(label);
+        });
         grid.append(card);
       });
       renderSummaryRings();
     }
 
     function renderSummaryRings() {
-      const all = dayShort.flatMap(day => tasksByDay[day].map((task, index) => ({ day, index, type: task[0] })));
-      const done = all.filter(t => saved[taskKey(t.day, t.index)]);
+      const all = dayShort.flatMap((day, dayIndex) => {
+        const dateKey = dateKeyForWeekDay(dayIndex);
+        const regular = tasksByDay[day].map((task, index) => ({ day, index, type: task[0], key: taskKey(day, index) }));
+        const dated = (appState.datedTasks[dateKey] || []).map((task, index) => ({ day, index, type: "buffer", key: datedTaskKey(dateKey, index) }));
+        return [...regular, ...dated];
+      });
+      const done = all.filter(t => saved[t.key]);
       const money = all.filter(t => ["money", "blog", "ai"].includes(t.type));
-      const moneyDone = money.filter(t => saved[taskKey(t.day, t.index)]);
+      const moneyDone = money.filter(t => saved[t.key]);
       const resource = all.filter(t => ["family", "rest", "body"].includes(t.type));
-      const resourceDone = resource.filter(t => saved[taskKey(t.day, t.index)]);
+      const resourceDone = resource.filter(t => saved[t.key]);
       setRing(document.getElementById("weekRing"), all.length ? done.length / all.length : 0);
       setRing(document.getElementById("moneyRing"), money.length ? moneyDone.length / money.length : 0);
       setRing(document.getElementById("resourceRing"), resource.length ? resourceDone.length / resource.length : 0);
