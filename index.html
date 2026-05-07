@@ -1,0 +1,1453 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Мой веселый планер продуктивности</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>window.PLANNER_API_BASE = "";</script>
+  <script src="./config.js"></script>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #667085;
+      --bg: #fff8ec;
+      --paper: #ffffff;
+      --line: #2d2d2d;
+      --soft-line: #e5e7eb;
+      --blue: #78a0e8;
+      --blue-2: #dce9ff;
+      --green: #a8cf90;
+      --green-2: #dff0d6;
+      --yellow: #ffe18a;
+      --yellow-2: #fff3c9;
+      --red: #d66b68;
+      --red-2: #f8d8d7;
+      --peach: #f4dfc1;
+      --violet: #b9a1e6;
+      --violet-2: #eee6ff;
+      --mint: #9ed9c6;
+      --mint-2: #dcf5ed;
+      --pink: #f3a5c4;
+      --pink-2: #ffe4ef;
+      --gray: #d6d6d6;
+      --shadow: 0 18px 42px rgba(20, 32, 43, .12);
+      font-family: Inter, Aptos, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.55) 1px, transparent 1px),
+        var(--bg);
+      background-size: 34px 34px;
+      color: var(--ink);
+    }
+
+    .shell {
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .hero, .side-card, .panel, .day-check, .mood-card {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 22px;
+      min-height: 168px;
+      display: grid;
+      align-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      background: conic-gradient(var(--yellow), var(--pink), var(--violet), var(--mint), var(--yellow));
+      opacity: .24;
+    }
+
+    .eyebrow {
+      font-size: 13px;
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: .08em;
+      color: #376b4d;
+    }
+
+    h1 {
+      margin: 8px 0 8px;
+      max-width: 900px;
+      font-size: 34px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .hero p, .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.48;
+    }
+
+    .side-card {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      background: #fffef7;
+    }
+
+    .focus-line {
+      padding: 12px;
+      border: 2px dashed #95bd7c;
+      border-radius: 12px;
+      background: #f5ffe8;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .telegram-badge {
+      display: none;
+      width: fit-content;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      background: var(--blue-2);
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .telegram-badge.active {
+      display: inline-flex;
+    }
+
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 10px;
+      padding: 10px 0 16px;
+      background: rgba(255, 248, 236, .94);
+      backdrop-filter: blur(8px);
+      overflow-x: auto;
+    }
+
+    .tab {
+      border: 2px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 5px 0 rgba(0,0,0,.16);
+    }
+
+    .tab.active {
+      background: var(--yellow);
+      transform: translateY(2px);
+      box-shadow: 0 3px 0 rgba(0,0,0,.18);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin: 18px 0 12px;
+    }
+
+    h2 {
+      margin: 0 0 4px;
+      font-size: 25px;
+      letter-spacing: 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--paper);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      display: inline-block;
+    }
+
+    .schedule-wrap {
+      overflow: auto;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    table.schedule {
+      width: 100%;
+      min-width: 1180px;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: var(--paper);
+    }
+
+    .schedule th, .schedule td {
+      border: 2px solid var(--line);
+      padding: 0;
+      height: 70px;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .schedule thead th {
+      height: 54px;
+      background: var(--gray);
+      font-size: 15px;
+      text-transform: lowercase;
+      font-weight: 950;
+    }
+
+    .schedule .corner {
+      width: 118px;
+      background: #cfdcf5;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .time-cell {
+      width: 118px;
+      background: #d2d2d2;
+      font-size: 18px;
+      font-weight: 950;
+    }
+
+    .slot {
+      width: 100%;
+      height: 100%;
+      min-height: 70px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      padding: 7px 8px;
+      color: #151515;
+      cursor: default;
+      position: relative;
+    }
+
+    .slot b {
+      font-size: 15px;
+      line-height: 1.12;
+    }
+
+    .slot small {
+      display: block;
+      font-size: 11px;
+      line-height: 1.16;
+      color: rgba(0,0,0,.66);
+      font-weight: 750;
+    }
+
+    .slot:hover .tip {
+      display: block;
+    }
+
+    .tip {
+      display: none;
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: calc(100% + 8px);
+      z-index: 9;
+      background: #17212b;
+      color: #fff;
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+      box-shadow: 0 10px 22px rgba(0,0,0,.22);
+    }
+
+    .money { background: var(--green); }
+    .blog { background: var(--red); }
+    .ai { background: var(--violet); }
+    .family { background: var(--blue); }
+    .body { background: #9ac27e; }
+    .home { background: var(--peach); }
+    .rest { background: var(--mint); }
+    .buffer { background: var(--yellow); }
+    .empty { background: #fafafa; color: #aaa; }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(190px, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .day-check {
+      overflow: hidden;
+      min-height: 520px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .day-top {
+      display: grid;
+      grid-template-columns: 1fr 78px;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 2px solid var(--line);
+      min-height: 92px;
+    }
+
+    .day-name {
+      font-size: 18px;
+      font-weight: 950;
+      text-transform: lowercase;
+    }
+
+    .day-focus {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.32;
+      margin-top: 3px;
+    }
+
+    .mini-ring, .big-ring {
+      border-radius: 50%;
+      background: conic-gradient(#2f6b4f 0deg, #edf0ed 0deg);
+      display: grid;
+      place-items: center;
+      position: relative;
+      border: 2px solid var(--line);
+    }
+
+    .mini-ring {
+      width: 70px;
+      height: 70px;
+    }
+
+    .big-ring {
+      width: 132px;
+      height: 132px;
+      margin: 4px auto 10px;
+    }
+
+    .mini-ring::before, .big-ring::before {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--line);
+    }
+
+    .mini-ring::before {
+      width: 43px;
+      height: 43px;
+    }
+
+    .big-ring::before {
+      width: 82px;
+      height: 82px;
+    }
+
+    .ring-text {
+      position: relative;
+      font-size: 14px;
+      font-weight: 950;
+      z-index: 2;
+    }
+
+    .day-targets {
+      padding: 10px 12px;
+      background: #fff9dd;
+      border-bottom: 2px solid var(--line);
+      font-size: 12px;
+      line-height: 1.35;
+      color: #5b4a20;
+      font-weight: 800;
+    }
+
+    .task-list {
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .task {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 8px;
+      align-items: start;
+      padding: 8px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .task.done {
+      background: #efffea;
+    }
+
+    .task input {
+      width: 19px;
+      height: 19px;
+      accent-color: #2f6b4f;
+      margin-top: 1px;
+    }
+
+    .task-title {
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.24;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .mini-label {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1c1c1c;
+    }
+
+    .reset {
+      border: 2px solid var(--line);
+      background: var(--red-2);
+      color: #7d3338;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,.16);
+    }
+
+    .balance-layout {
+      display: grid;
+      grid-template-columns: minmax(420px, .8fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .wheel-box {
+      display: grid;
+      place-items: center;
+      min-height: 520px;
+      background: #fffef7;
+    }
+
+    #balanceSvg {
+      width: min(100%, 500px);
+      height: auto;
+      overflow: visible;
+    }
+
+    .balance-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .control {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+    }
+
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 950;
+      margin-bottom: 8px;
+    }
+
+    .control input {
+      width: 100%;
+      accent-color: #2f6b4f;
+    }
+
+    .mood-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .planning-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .bot-layout {
+      display: grid;
+      grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .bot-box {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .bot-box textarea {
+      width: 100%;
+      min-height: 92px;
+      resize: vertical;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      font: inherit;
+      line-height: 1.4;
+      margin: 10px 0;
+    }
+
+    .bot-send {
+      border: 2px solid var(--line);
+      background: var(--green);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,.16);
+    }
+
+    .bot-reply {
+      min-height: 80px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      background: #f6fff2;
+      white-space: pre-wrap;
+      color: #24462f;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .plan-card {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 380px;
+    }
+
+    .plan-head {
+      padding: 14px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .plan-head h3 {
+      margin: 0 0 4px;
+      font-size: 18px;
+    }
+
+    .plan-body {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .plan-question {
+      padding: 10px;
+      border: 2px dashed var(--line);
+      border-radius: 10px;
+      background: #fffdf4;
+      color: #5a4d26;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 850;
+    }
+
+    .subtasks {
+      display: grid;
+      gap: 8px;
+    }
+
+    .subtask {
+      display: grid;
+      grid-template-columns: 24px 1fr 28px;
+      gap: 8px;
+      align-items: start;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .subtask input[type="checkbox"] {
+      width: 19px;
+      height: 19px;
+      accent-color: #2f6b4f;
+      margin-top: 5px;
+    }
+
+    .subtask textarea {
+      min-height: 34px;
+      width: 100%;
+      resize: vertical;
+      border: 0;
+      outline: none;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.35;
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .subtask button, .add-subtask {
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--yellow);
+      font-weight: 950;
+      cursor: pointer;
+    }
+
+    .subtask button {
+      width: 26px;
+      height: 26px;
+      line-height: 1;
+    }
+
+    .add-subtask {
+      padding: 9px 10px;
+      width: 100%;
+      box-shadow: 0 3px 0 rgba(0,0,0,.16);
+    }
+
+    .mood-card {
+      min-height: 150px;
+      padding: 18px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+    }
+
+    .mood-card strong {
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    .mood-card span {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .week-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      min-height: 132px;
+      text-align: center;
+    }
+
+    .summary-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    @media (max-width: 1220px) {
+      .top, .balance-layout, .bot-layout { grid-template-columns: 1fr; }
+      .check-grid { grid-template-columns: repeat(2, minmax(230px, 1fr)); }
+      .week-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .planning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .shell { padding: 14px; }
+      h1 { font-size: 27px; }
+      .section-title { align-items: start; flex-direction: column; }
+      .check-grid, .mood-grid, .balance-controls, .week-summary, .planning-grid { grid-template-columns: 1fr; }
+      .day-check { min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div class="hero">
+        <div class="eyebrow">Мой план задач</div>
+        <h1>Весёлая неделя: время, дети, блог, ИИ, деньги и ресурс в одной картинке</h1>
+        <p>Смотри на неделю как на цветную карту. Рабочие блоки не должны съедать жизнь, а семейные и бытовые блоки не должны прятать рост дохода.</p>
+        <div class="telegram-badge" id="telegramBadge">Открыто внутри Telegram Mini App</div>
+      </div>
+      <aside class="side-card">
+        <div class="focus-line">Фокус 3 месяцев: блог + первые продажи наставничества + ИИ-система.</div>
+        <p class="hint">Главное правило: снято лучше, чем гениально придумано. Плохой день засчитывается, если есть 20 минут денежного действия, дети без телефона и сон.</p>
+      </aside>
+    </header>
+
+    <nav class="tabs" aria-label="Разделы">
+      <button class="tab active" data-view="calendar">Календарь задач</button>
+      <button class="tab" data-view="checklist">Чек-календарь</button>
+      <button class="tab" data-view="planning">План недели</button>
+      <button class="tab" data-view="balance">Колесо баланса</button>
+      <button class="tab" data-view="motivation">Мотивация</button>
+      <button class="tab" data-view="bot">Бот</button>
+    </nav>
+
+    <section id="calendar" class="view active">
+      <div class="section-title">
+        <div>
+          <h2>Первый лист: график по времени и дням</h2>
+          <p class="hint">Наводи на цветные ячейки: внутри встроены короткие рекомендации, чтобы не держать правила отдельно.</p>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="schedule-wrap">
+        <table class="schedule" id="scheduleTable"></table>
+      </div>
+    </section>
+
+    <section id="checklist" class="view">
+      <div class="section-title">
+        <div>
+          <h2>Второй лист: чек-лист в виде календаря</h2>
+          <p class="hint">Ставь галочки прямо в дне. Кружочек в каждой колонке закрывается и показывает процент выполненных задач.</p>
+        </div>
+        <button class="reset" id="resetBtn">Сбросить галочки</button>
+      </div>
+      <div class="week-summary">
+        <div class="summary-card">
+          <h3>Неделя</h3>
+          <div class="big-ring" id="weekRing"><span class="ring-text">0%</span></div>
+          <p class="hint">Общий процент выполнения.</p>
+        </div>
+        <div class="summary-card">
+          <h3>Деньги + блог</h3>
+          <div class="big-ring" id="moneyRing"><span class="ring-text">0%</span></div>
+          <p class="hint">Главные ростовые действия.</p>
+        </div>
+        <div class="summary-card">
+          <h3>Семья + ресурс</h3>
+          <div class="big-ring" id="resourceRing"><span class="ring-text">0%</span></div>
+          <p class="hint">Чтобы не ехать на усталости.</p>
+        </div>
+        <div class="summary-card">
+          <h3>Минимум дня</h3>
+          <div class="focus-line">20 минут деньги + дети + сон</div>
+        </div>
+      </div>
+      <div class="check-grid" id="checkGrid"></div>
+    </section>
+
+    <section id="planning" class="view">
+      <div class="section-title">
+        <div>
+          <h2>Планирование недели и подзадачи</h2>
+          <p class="hint">Это место для нашего воскресного планирования. Я спрашиваю по направлениям, ты отвечаешь конкретикой, а потом мы переносим главное в календарь и чек-календарь.</p>
+        </div>
+      </div>
+      <div class="planning-grid" id="planningGrid"></div>
+    </section>
+
+    <section id="balance" class="view">
+      <div class="section-title">
+        <div>
+          <h2>Колесо баланса вместо графиков</h2>
+          <p class="hint">Это не про “всё на 10”. Это способ увидеть, где жизнь проседает и почему план может не ехать.</p>
+        </div>
+      </div>
+      <div class="balance-layout">
+        <div class="panel wheel-box">
+          <svg id="balanceSvg" viewBox="-270 -270 540 540" role="img" aria-label="Колесо баланса"></svg>
+        </div>
+        <div class="panel">
+          <h2>Оценки сфер</h2>
+          <p class="hint">Поставь значения от 1 до 10. Я заложила стартовые оценки из твоей самодиагностики.</p>
+          <div class="balance-controls" id="balanceControls"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="motivation" class="view">
+      <div class="section-title">
+        <div>
+          <h2>Мотивация</h2>
+          <p class="hint">Не “надо успеть всё”, а “я строю жизнь, где деньги покупают помощь, свободу и качество”.</p>
+        </div>
+      </div>
+      <div class="mood-grid">
+        <div class="mood-card" style="background: var(--yellow-2)">
+          <strong>Деньги для меня — это свобода выбора.</strong>
+          <span>Няня, помощница, спа, дом у сосен, путешествия, возможность не экономить на базовом.</span>
+        </div>
+        <div class="mood-card" style="background: var(--pink-2)">
+          <strong>Моя медийность — способ помогать людям зарабатывать.</strong>
+          <span>Я показываю, что можно выходить в онлайн, внедрять ИИ и расти даже дома с детьми.</span>
+        </div>
+        <div class="mood-card" style="background: var(--green-2)">
+          <strong>Я не выбираю между детьми, деньгами и собой.</strong>
+          <span>Я строю порядок, где у каждого есть своё место: работа, семья, тело, отдых и мои идеи.</span>
+        </div>
+        <div class="mood-card" style="background: var(--violet-2)">
+          <strong>Мой быстрый мозг — преимущество, если у него есть рельсы.</strong>
+          <span>Мне можно переключаться между клиентом, блогом и ИИ. Нельзя превращать день в хаос.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="bot" class="view">
+      <div class="section-title">
+        <div>
+          <h2>Telegram-бот для фиксации задач</h2>
+          <p class="hint">Когда подключим токен, можно будет писать боту голосом или текстом: “сделала рилс”, “готово шаги”, “/plan клиент 3 поста”. Здесь можно протестировать логику прямо сейчас.</p>
+        </div>
+      </div>
+      <div class="bot-layout">
+        <div class="bot-box">
+          <h2>Тест сообщения</h2>
+          <p class="hint">Это имитация Telegram-сообщения. Работает, если планер открыт через локальный сервер.</p>
+          <textarea id="botText">сделала рилс</textarea>
+          <button class="bot-send" id="botSend" type="button">Отправить в планер</button>
+          <div class="bot-reply" id="botReply">Ответ появится здесь.</div>
+        </div>
+        <div class="bot-box">
+          <h2>Команды</h2>
+          <div class="plan-question">/start — подсказка по командам</div>
+          <div class="plan-question">сделала рилс — отметит похожую задачу сегодняшнего дня</div>
+          <div class="plan-question">готово шаги — закроет задачу про шаги, если она есть сегодня</div>
+          <div class="plan-question">/plan клиент 3 поста — добавит подзадачу в “Клиент СММ”</div>
+          <div class="plan-question">/today — покажет задачи на сегодня</div>
+          <div class="plan-question">/week — покажет общий процент недели</div>
+          <div class="plan-question">/balance здоровье 7 — обновит колесо баланса</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const days = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
+    const dayShort = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+    const times = ["6:30", "7:00", "7:30", "8:00", "8:30", "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", "12:30", "14:00", "15:30", "17:30", "18:00", "19:30", "20:30", "21:30"];
+
+    const labels = {
+      money: ["Деньги", "var(--green)"],
+      blog: ["Блог", "var(--red)"],
+      ai: ["ИИ", "var(--violet)"],
+      family: ["Дети/семья", "var(--blue)"],
+      body: ["Тело", "#9ac27e"],
+      home: ["Дом", "var(--peach)"],
+      rest: ["Ресурс", "var(--mint)"],
+      buffer: ["Буфер", "var(--yellow)"]
+    };
+
+    const defaultSlot = ["empty", "", ""];
+    const weekdayMorning = {
+      "6:30": ["family", "подъём", "Сначала дети и сборы. Не открывать рабочие чаты."],
+      "7:00": ["family", "бужу детей", "Голос спокойнее скорости. Это экономит ресурс."],
+      "7:30": ["family", "выходим в сад", "Детский блок не конкурирует с работой."],
+      "8:00": ["body", "зарядка", "Утренний ресурс — твой главный актив."],
+      "8:30": ["body", "зарядка / душ", "Коротко, без героизма."],
+      "9:00": ["home", "завтрак + кухня", "Посудомойка и поверхности, не весь дом."],
+      "9:30": ["blog", "главный рабочий блок", "На каждый день один главный фокус: блог, клиент, оффер или ИИ."],
+      "10:00": ["blog", "продолжение блока", "Не прыгать по вкладкам, пока не закрыт результат блока."],
+      "10:30": ["ai", "ИИ / упаковка", "ИИ работает на блог/продажи, не уводит в новую тему."],
+      "11:00": ["buffer", "закрыть и записать итог", "Зафиксировать, что сделано, и не держать это в голове."],
+      "11:30": ["buffer", "сбор к саду", "Буфер спасает от ощущения провала."],
+      "12:30": ["family", "младший + обед", "Не планировать сюда фокусную работу."],
+      "14:00": ["blog", "тихий спринт во сне", "Один короткий спринт 30-45 минут: блог, оффер или ИИ."],
+      "15:30": ["family", "младший дома", "Семейный блок."],
+      "17:30": ["family", "забрать старшую", "Переход в вечер без чувства вины."],
+      "18:00": ["family", "прогулка / танцы", "Вт/Чт танцы, в остальные прогулка."],
+      "19:30": ["family", "ужин", "Семейное закрытие дня."],
+      "20:30": ["rest", "шаги / отдых", "Если шаги не добраны — прогулка. Если добраны — отдых."],
+      "21:30": ["rest", "сонный режим", "Не уходить в ночной рабочий запой."]
+    };
+
+    function slotFor(dayIndex, time) {
+      if (dayIndex < 5) {
+        const slot = weekdayMorning[time] || defaultSlot;
+        if (dayIndex === 0 && time === "9:30") return ["money", "клиент: посты", "Клиентский блок 1,5 часа. Например: 3 поста, часть рилсов, план съёмки."];
+        if (dayIndex === 0 && time === "10:00") return ["money", "клиент: рилсы", "Продолжение клиентского блока. Делаем пачкой, чтобы не возвращаться каждый день."];
+        if (dayIndex === 0 && time === "10:30") return ["money", "клиент: съёмка/план", "Закрыть конкретный результат и записать следующий шаг."];
+        if (dayIndex === 0 && time === "11:00") return ["buffer", "зафиксировать итог", "Что сделано по клиенту, что переносим, что ждём."];
+        if (dayIndex === 0 && time === "14:00") return ["blog", "личный блог: рилс", "После клиентского блока возвращаем фокус на свой рост."];
+        if (dayIndex === 1 && time === "9:30") return ["blog", "личный блог: рилс", "Снять/выложить рилс. Сценарий без публикации не считается."];
+        if (dayIndex === 1 && time === "10:00") return ["blog", "сторис + прогрев", "Показать экспертность, путь, ИИ, жизнь с детьми."];
+        if (dayIndex === 1 && time === "10:30") return ["ai", "ИИ для контента", "Шаблон описания, карусели, постинга или разбора рилсов."];
+        if (dayIndex === 1 && time === "11:00") return ["buffer", "диалоги / CTA", "Один призыв к диалогу или ответ в директе."];
+        if ((dayIndex === 1 || dayIndex === 3) && time === "18:00") return ["family", "танцы + прогулка", "Старшая получает отдельное внимание."];
+        if (dayIndex === 2 && time === "9:30") return ["blog", "оффер наставничества", "Формат, результат, цена, первые 2 места."];
+        if (dayIndex === 2 && time === "10:00") return ["blog", "прогрев к продаже", "Сформулировать смысл: кому я помогаю и какой результат даю."];
+        if (dayIndex === 2 && time === "10:30") return ["ai", "ИИ-автоматизация блога", "Постинг каруселей, TG, Reels или директ — один процесс за раз."];
+        if (dayIndex === 2 && time === "11:00") return ["buffer", "упростить до MVP", "Не строим идеальную систему. Делаем рабочую версию."];
+        if (dayIndex === 3 && time === "9:30") return ["money", "клиент: посты", "Клиентский блок 1,5 часа. Второй и последний тяжёлый блок клиента на неделе."];
+        if (dayIndex === 3 && time === "10:00") return ["money", "клиент: рилсы", "Собрать/согласовать рилсы пачкой."];
+        if (dayIndex === 3 && time === "10:30") return ["money", "клиент: съёмка/отчёт", "План съёмки, поездка или отчёт клиенту."];
+        if (dayIndex === 3 && time === "11:00") return ["buffer", "зафиксировать итог", "Что готово, что отправлено, что ждём от клиента."];
+        if (dayIndex === 3 && time === "14:00") return ["ai", "ИИ-обучение точечно", "Разбираем агентов только под реальную задачу."];
+        if (dayIndex === 4 && time === "9:30") return ["buffer", "пятница-буфер", "Закрыть хвосты, не начинать тяжёлое."];
+        if (dayIndex === 4 && time === "10:00") return ["blog", "лёгкий блог", "Сторис, заметка, черновик, без давления."];
+        if (dayIndex === 4 && time === "10:30") return ["home", "одна зона дома", "Шкаф/кухня/холодильник. Не вся квартира."];
+        if (dayIndex === 4 && time === "11:00") return ["body", "чекап / тело", "Запись к врачу, анализы, спина, тазовое дно, массаж в план."];
+        if (dayIndex === 4 && time === "14:00") return ["rest", "отдых / лёгкое", "Пятница не обязана быть скрытым рабочим днём."];
+        return slot;
+      }
+      if (dayIndex === 5) {
+        const sat = {
+          "8:00": ["rest", "мягкое утро", "Выходной ритм мягче. Без школы и гонки."],
+          "8:30": ["rest", "завтрак спокойно", "Не начинать день с обязанностей."],
+          "9:00": ["family", "семейное утро", "Медленно, с теплом, без рабочего рывка."],
+          "10:00": ["family", "семейный выезд / прогулка", "Лес, речка, красивый досуг или просто воздух."],
+          "12:30": ["family", "семья", "Качественное время."],
+          "14:00": ["rest", "отдых", "Мозг выключить."],
+          "18:00": ["family", "семейный вечер", "Позитив, а не уроки и конфликты."],
+          "20:30": ["rest", "отдых", "Восстановление без пользы."]
+        };
+        return sat[time] || defaultSlot;
+      }
+      const sun = {
+        "8:00": ["rest", "мягкое утро", "Не стартовать с обязанностей."],
+        "10:00": ["buffer", "обзор недели", "Что дало деньги, энергию, фокус."],
+        "10:30": ["buffer", "план недели", "3 результата: клиент, блог, ресурс."],
+        "12:30": ["family", "семья / свидание", "Муж, дети, мама-дочь по очереди."],
+        "14:00": ["rest", "восстановление", "Сон, прогулка, тишина."],
+        "18:00": ["home", "подготовка недели", "Меню на 3 дня, не идеальная жизнь."],
+        "20:30": ["rest", "сон раньше", "Ресурс на понедельник."]
+      };
+      return sun[time] || defaultSlot;
+    }
+
+    const tasksByDay = {
+      "Пн": [
+        ["money", "Клиент СММ: 1,5 часа пачкой", "90 мин"],
+        ["money", "По клиенту: посты/рилсы/план съёмки записать в подзадачи", "15 мин"],
+        ["blog", "Личный блог: снять или выложить 1 рилс", "35 мин"],
+        ["ai", "ИИ-задача под блог или клиентский процесс", "35 мин"],
+        ["home", "15 минут поверхности дома", "15 мин"],
+        ["family", "20-30 минут детям без телефона", "30 мин"],
+        ["body", "10 000 шагов или прогулка по состоянию", "45 мин"],
+        ["rest", "Сон до 22:30 или ритуал восстановления", "30 мин"]
+      ],
+      "Вт": [
+        ["blog", "Снять/выложить рилс для личного блога", "35 мин"],
+        ["blog", "Сторис + прогрев к наставничеству", "30 мин"],
+        ["ai", "ИИ для контента: шаблон/анализ/карусель", "35 мин"],
+        ["money", "Проверить диалоги/возможность продажи наставничества", "20 мин"],
+        ["family", "10 минут отдельно со старшей", "10 мин"],
+        ["family", "Танцы/прогулка без рабочих рывков", "60 мин"],
+        ["body", "Шаги", "45 мин"],
+        ["rest", "Закрыть день без ночного рабочего запоя", "20 мин"]
+      ],
+      "Ср": [
+        ["blog", "Оффер наставничества: 1 кусок упаковки", "45 мин"],
+        ["blog", "Прогрев к продаже: 1 смысл/пост/сторис", "35 мин"],
+        ["ai", "Автоматизация контента: один шаблон", "35 мин"],
+        ["home", "15 минут поверхности", "15 мин"],
+        ["family", "20-30 минут детям без телефона", "30 мин"],
+        ["body", "Зарядка/спина/шаги", "30 мин"],
+        ["rest", "Один спокойный вечерний ритуал", "20 мин"]
+      ],
+      "Чт": [
+        ["money", "Клиент СММ: 1,5 часа пачкой", "90 мин"],
+        ["money", "По клиенту: согласования/отчёт/план съёмки", "20 мин"],
+        ["blog", "Рилс: снять 3 дубля и выбрать достаточно хороший", "35 мин"],
+        ["ai", "ИИ-система: улучшить один процесс под блог/клиента", "35 мин"],
+        ["family", "Танцы/прогулка", "60 мин"],
+        ["body", "Шаги", "45 мин"],
+        ["rest", "Не работать после 22:00", "20 мин"]
+      ],
+      "Пт": [
+        ["buffer", "Закрыть 1 хвост недели", "40 мин"],
+        ["blog", "Лёгкий блог: сторис/пост/идея", "30 мин"],
+        ["home", "Одна зона дома: шкаф/кухня/холодильник", "60 мин"],
+        ["family", "20-30 минут детям без телефона", "30 мин"],
+        ["body", "Тело: шаги/растяжка/запись к специалисту", "45 мин"],
+        ["rest", "Восстановление без пользы", "45 мин"]
+      ],
+      "Сб": [
+        ["family", "Качественное семейное время", "90 мин"],
+        ["rest", "Один час без решений", "60 мин"],
+        ["home", "Лёгкий дом без героизма", "30 мин"],
+        ["body", "Шаги/движение", "45 мин"],
+        ["blog", "Одна заметка/идея для блога", "20 мин"]
+      ],
+      "Вс": [
+        ["buffer", "Обзор недели", "30 мин"],
+        ["buffer", "План на неделю: 3 главных результата", "30 мин"],
+        ["family", "Семейное время или свидание", "90 мин"],
+        ["rest", "Восстановление", "60 мин"],
+        ["blog", "Подготовить 1 черновик", "30 мин"]
+      ]
+    };
+
+    const apiBase = (window.PLANNER_API_BASE || "").replace(/\/$/, "");
+    const isLocalServer = location.protocol.startsWith("http") && ["127.0.0.1", "localhost"].includes(location.hostname);
+    const appState = {
+      server: Boolean(apiBase || isLocalServer),
+      done: JSON.parse(localStorage.getItem("planner.done.v2") || "{}"),
+      planning: {},
+      balance: {}
+    };
+    const saved = appState.done;
+    const balanceDefaults = {
+      "Здоровье": 6,
+      "Финансы": 5,
+      "Карьера/бизнес": 5,
+      "Отношения/семья": 6,
+      "Саморазвитие": 9,
+      "Отдых": 4,
+      "Творчество": 5,
+      "Внутренний ресурс": 5
+    };
+
+    const planningDefaults = [
+      {
+        id: "client",
+        type: "money",
+        title: "Клиент СММ",
+        question: "Что конкретно надо закрыть по клиенту на неделе?",
+        items: ["3 поста", "4 рилса", "Съездить к ним для съёмок"]
+      },
+      {
+        id: "blog",
+        type: "blog",
+        title: "Мой блог",
+        question: "Какие публикации двигают меня к 1500 аудитории и первой продаже?",
+        items: ["3 рилса", "2 экспертных поста/карусели", "1 продающий смысл"]
+      },
+      {
+        id: "offer",
+        type: "blog",
+        title: "Наставничество / продажи",
+        question: "Что нужно, чтобы продать 1-2 места?",
+        items: ["Сформулировать результат наставничества", "Описать формат и цену", "Сделать призыв к диалогу"]
+      },
+      {
+        id: "ai",
+        type: "ai",
+        title: "ИИ-система",
+        question: "Какой один процесс автоматизируем, чтобы не распыляться?",
+        items: ["Шаблон для рилсов", "Постинг в TG", "Разбор директ-сообщений"]
+      },
+      {
+        id: "family",
+        type: "family",
+        title: "Семья / дети",
+        question: "Где будет качественное время, а не просто обслуживание быта?",
+        items: ["1 час с детьми без телефона", "10 минут отдельно со старшей 3 раза", "Мини-свидание с мужем"]
+      },
+      {
+        id: "resource",
+        type: "rest",
+        title: "Тело / ресурс / дом",
+        question: "Что даст мне энергию и снизит визуальный шум?",
+        items: ["10 000 шагов по состоянию", "Одна зона дома в пятницу", "Запись на чекап/массаж/спину"]
+      }
+    ];
+
+    function taskKey(day, index) {
+      return `${day}-${index}`;
+    }
+
+    function initTelegramMiniApp() {
+      const tg = window.Telegram?.WebApp;
+      if (!tg) return;
+      tg.ready();
+      tg.expand();
+      document.body.style.backgroundColor = tg.themeParams?.bg_color || "";
+      document.getElementById("telegramBadge")?.classList.add("active");
+      tg.MainButton.setText("Открыть чек-календарь");
+      tg.MainButton.show();
+      tg.MainButton.onClick(() => {
+        document.querySelector('[data-view="checklist"]')?.click();
+      });
+    }
+
+    async function loadRemoteState() {
+      if (!appState.server) return;
+      try {
+        const response = await fetch(`${apiBase}/api/state`);
+        if (!response.ok) throw new Error("state unavailable");
+        const state = await response.json();
+        appState.done = state.done || {};
+        Object.keys(saved).forEach(key => delete saved[key]);
+        Object.assign(saved, appState.done);
+        appState.planning = state.planning || {};
+        appState.balance = state.balance || {};
+      } catch (error) {
+        console.warn("Remote state fallback:", error);
+      }
+    }
+
+    async function saveRemoteState(partial) {
+      if (!appState.server) return;
+      try {
+        await fetch(`${apiBase}/api/state`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(partial)
+        });
+      } catch (error) {
+        console.warn("Remote state save failed:", error);
+      }
+    }
+
+    function planningKey(sectionId) {
+      return `planner.planning.${sectionId}`;
+    }
+
+    function getPlanningItems(section) {
+      if (appState.planning[section.id]) return appState.planning[section.id];
+      const raw = localStorage.getItem(planningKey(section.id));
+      if (!raw) return section.items.map(text => ({ text, done: false }));
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return section.items.map(text => ({ text, done: false }));
+      }
+    }
+
+    function savePlanningItems(sectionId, items) {
+      appState.planning[sectionId] = items;
+      localStorage.setItem(planningKey(sectionId), JSON.stringify(items));
+      saveRemoteState({ planning: appState.planning });
+    }
+
+    function buildPlanning() {
+      const grid = document.getElementById("planningGrid");
+      grid.innerHTML = "";
+      planningDefaults.forEach(section => {
+        const items = getPlanningItems(section);
+        const card = document.createElement("article");
+        card.className = "plan-card";
+        card.innerHTML = `
+          <div class="plan-head ${section.type}">
+            <h3>${section.title}</h3>
+            <div class="hint">${labels[section.type][0]}</div>
+          </div>
+          <div class="plan-body">
+            <div class="plan-question">${section.question}</div>
+            <div class="subtasks"></div>
+            <button class="add-subtask" type="button">+ добавить подзадачу</button>
+          </div>
+        `;
+        const list = card.querySelector(".subtasks");
+        function renderItems() {
+          list.innerHTML = "";
+          items.forEach((item, index) => {
+            const row = document.createElement("div");
+            row.className = "subtask";
+            row.innerHTML = `
+              <input type="checkbox" ${item.done ? "checked" : ""}>
+              <textarea rows="1">${item.text}</textarea>
+              <button type="button" aria-label="Удалить">×</button>
+            `;
+            row.querySelector("input").onchange = (event) => {
+              items[index].done = event.target.checked;
+              savePlanningItems(section.id, items);
+            };
+            row.querySelector("textarea").oninput = (event) => {
+              items[index].text = event.target.value;
+              savePlanningItems(section.id, items);
+            };
+            row.querySelector("button").onclick = () => {
+              items.splice(index, 1);
+              savePlanningItems(section.id, items);
+              renderItems();
+            };
+            list.append(row);
+          });
+        }
+        card.querySelector(".add-subtask").onclick = () => {
+          items.push({ text: "", done: false });
+          savePlanningItems(section.id, items);
+          renderItems();
+          const textareas = list.querySelectorAll("textarea");
+          textareas[textareas.length - 1]?.focus();
+        };
+        renderItems();
+        grid.append(card);
+      });
+    }
+
+    function buildLegend() {
+      const wrap = document.getElementById("legend");
+      wrap.innerHTML = Object.entries(labels).map(([type, [label, color]]) => (
+        `<span class="pill"><span class="dot" style="background:${color}"></span>${label}</span>`
+      )).join("");
+    }
+
+    function buildSchedule() {
+      const table = document.getElementById("scheduleTable");
+      const head = `<thead><tr><th class="corner">дни недели<br>время</th>${days.map(day => `<th>${day}</th>`).join("")}</tr></thead>`;
+      const rows = times.map(time => {
+        const cells = days.map((_, dayIndex) => {
+          const [type, title, tip] = slotFor(dayIndex, time);
+          const inner = title ? `<div class="slot ${type}"><b>${title}</b><small>${labels[type]?.[0] || ""}</small><span class="tip">${tip}</span></div>` : `<div class="slot empty"></div>`;
+          return `<td>${inner}</td>`;
+        }).join("");
+        return `<tr><td class="time-cell">${time}</td>${cells}</tr>`;
+      }).join("");
+      table.innerHTML = `${head}<tbody>${rows}</tbody>`;
+    }
+
+    function dayPercent(day) {
+      const tasks = tasksByDay[day] || [];
+      const done = tasks.filter((_, index) => saved[taskKey(day, index)]).length;
+      return tasks.length ? done / tasks.length : 0;
+    }
+
+    function setRing(el, value) {
+      const deg = Math.max(0, Math.min(1, value)) * 360;
+      el.style.background = `conic-gradient(#2f6b4f ${deg}deg, #edf0ed ${deg}deg)`;
+      el.querySelector(".ring-text").textContent = `${Math.round(value * 100)}%`;
+    }
+
+    function renderChecklist() {
+      const grid = document.getElementById("checkGrid");
+      grid.innerHTML = "";
+      dayShort.forEach((day, dayIndex) => {
+        const percent = dayPercent(day);
+        const tasks = tasksByDay[day];
+        const card = document.createElement("article");
+        card.className = "day-check";
+        card.innerHTML = `
+          <div class="day-top ${dayIndex < 5 ? "body" : "family"}">
+            <div>
+              <div class="day-name">${days[dayIndex]}</div>
+              <div class="day-focus">${dayIndex < 5 ? "3 фокуса максимум: деньги, блог/ИИ, ресурс" : "семья, отдых, мягкое планирование"}</div>
+            </div>
+            <div class="mini-ring"><span class="ring-text">0%</span></div>
+          </div>
+          <div class="day-targets">${dayIndex === 4 ? "Пятница — буфер. Закрыть хвосты, а не начинать марафон." : dayIndex > 4 ? "Выходной засчитывается ресурсом, семьёй и мягким обзором." : "Главное: сначала ростовое действие, потом остальное."}</div>
+          <div class="task-list"></div>
+        `;
+        setRing(card.querySelector(".mini-ring"), percent);
+        const list = card.querySelector(".task-list");
+        tasks.forEach(([type, title, minutes], index) => {
+          const id = taskKey(day, index);
+          const done = Boolean(saved[id]);
+          const label = document.createElement("label");
+          label.className = `task ${done ? "done" : ""}`;
+          label.innerHTML = `
+            <input type="checkbox" ${done ? "checked" : ""}>
+            <div>
+              <div class="task-title">${title}</div>
+              <div class="task-meta"><span class="mini-label">${labels[type][0]}</span><span>${minutes}</span></div>
+            </div>
+          `;
+          label.querySelector("input").onchange = (event) => {
+            if (event.target.checked) saved[id] = true;
+            else delete saved[id];
+            localStorage.setItem("planner.done.v2", JSON.stringify(saved));
+            saveRemoteState({ done: saved });
+            renderChecklist();
+          };
+          list.append(label);
+        });
+        grid.append(card);
+      });
+      renderSummaryRings();
+    }
+
+    function renderSummaryRings() {
+      const all = dayShort.flatMap(day => tasksByDay[day].map((task, index) => ({ day, index, type: task[0] })));
+      const done = all.filter(t => saved[taskKey(t.day, t.index)]);
+      const money = all.filter(t => ["money", "blog", "ai"].includes(t.type));
+      const moneyDone = money.filter(t => saved[taskKey(t.day, t.index)]);
+      const resource = all.filter(t => ["family", "rest", "body"].includes(t.type));
+      const resourceDone = resource.filter(t => saved[taskKey(t.day, t.index)]);
+      setRing(document.getElementById("weekRing"), all.length ? done.length / all.length : 0);
+      setRing(document.getElementById("moneyRing"), money.length ? moneyDone.length / money.length : 0);
+      setRing(document.getElementById("resourceRing"), resource.length ? resourceDone.length / resource.length : 0);
+    }
+
+    function buildBalanceControls() {
+      const wrap = document.getElementById("balanceControls");
+      wrap.innerHTML = "";
+      Object.entries(balanceDefaults).forEach(([label, defaultValue]) => {
+        const value = Number(appState.balance[label] || localStorage.getItem(`planner.balance.${label}`) || defaultValue);
+        const div = document.createElement("div");
+        div.className = "control";
+        div.innerHTML = `
+          <label><span>${label}</span><span class="val">${value}/10</span></label>
+          <input type="range" min="1" max="10" value="${value}">
+        `;
+        const input = div.querySelector("input");
+        const val = div.querySelector(".val");
+        input.oninput = () => {
+          localStorage.setItem(`planner.balance.${label}`, input.value);
+          appState.balance[label] = Number(input.value);
+          saveRemoteState({ balance: appState.balance });
+          val.textContent = `${input.value}/10`;
+          drawBalanceWheel();
+        };
+        wrap.append(div);
+      });
+      drawBalanceWheel();
+    }
+
+    function drawBalanceWheel() {
+      const svg = document.getElementById("balanceSvg");
+      const names = Object.keys(balanceDefaults);
+      const values = names.map(name => Number(appState.balance[name] || localStorage.getItem(`planner.balance.${name}`) || balanceDefaults[name]));
+      const max = 10;
+      const radius = 190;
+      const colors = ["#78a0e8", "#a8cf90", "#d66b68", "#f3a5c4", "#b9a1e6", "#9ed9c6", "#ffe18a", "#f4dfc1"];
+      const point = (i, r) => {
+        const angle = (-90 + i * 360 / names.length) * Math.PI / 180;
+        return [Math.cos(angle) * r, Math.sin(angle) * r];
+      };
+      const rings = [2,4,6,8,10].map(level => {
+        const pts = names.map((_, i) => point(i, radius * level / max).join(",")).join(" ");
+        return `<polygon points="${pts}" fill="none" stroke="#d7d7d7" stroke-width="1.5" />`;
+      }).join("");
+      const axes = names.map((name, i) => {
+        const [x, y] = point(i, radius);
+        const [lx, ly] = point(i, radius + 45);
+        return `<line x1="0" y1="0" x2="${x}" y2="${y}" stroke="#d7d7d7" stroke-width="1.5" />
+          <text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="800" fill="#17212b">${name}</text>`;
+      }).join("");
+      const dataPts = values.map((v, i) => point(i, radius * v / max).join(",")).join(" ");
+      const dots = values.map((v, i) => {
+        const [x, y] = point(i, radius * v / max);
+        return `<circle cx="${x}" cy="${y}" r="6" fill="${colors[i]}" stroke="#17212b" stroke-width="2" />`;
+      }).join("");
+      svg.innerHTML = `
+        <circle cx="0" cy="0" r="232" fill="#fff" stroke="#17212b" stroke-width="3" />
+        ${rings}
+        ${axes}
+        <polygon points="${dataPts}" fill="rgba(47,107,79,.28)" stroke="#2f6b4f" stroke-width="4" />
+        ${dots}
+        <text x="0" y="-226" text-anchor="middle" font-size="18" font-weight="950" fill="#17212b">колесо баланса</text>
+      `;
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.view).classList.add("active");
+      };
+    });
+
+    document.getElementById("resetBtn").onclick = () => {
+      if (confirm("Сбросить все галочки в чек-календаре?")) {
+        Object.keys(saved).forEach(key => delete saved[key]);
+        localStorage.setItem("planner.done.v2", "{}");
+        saveRemoteState({ done: {} });
+        renderChecklist();
+      }
+    };
+
+    document.getElementById("botSend").onclick = async () => {
+      const replyBox = document.getElementById("botReply");
+      const text = document.getElementById("botText").value;
+      if (!appState.server) {
+        replyBox.textContent = "Открой планер через http://127.0.0.1:8787, чтобы тест бота работал.";
+        return;
+      }
+      replyBox.textContent = "Отправляю...";
+      try {
+        const response = await fetch(`${apiBase}/api/telegram/text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        replyBox.textContent = data.reply || "Готово.";
+        await loadRemoteState();
+        renderChecklist();
+        buildPlanning();
+        buildBalanceControls();
+      } catch (error) {
+        replyBox.textContent = `Не получилось отправить: ${error.message}`;
+      }
+    };
+
+    async function boot() {
+      initTelegramMiniApp();
+      await loadRemoteState();
+      buildLegend();
+      buildSchedule();
+      renderChecklist();
+      buildPlanning();
+      buildBalanceControls();
+    }
+
+    boot();
+  </script>
+</body>
+</html>
